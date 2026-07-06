@@ -17,11 +17,13 @@ app = FastAPI(
 origins = [
     "http://localhost:5173", # standard Vite React server
     "http://localhost:3000",
+    "https://bright-pithivier-c4268b.netlify.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex="https://.*\\.netlify\\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
