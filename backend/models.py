@@ -9,6 +9,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     monthly_income = Column(Float, default=0.0)
+    currency = Column(String, default="USD")
 
     # Relationships
     loans = relationship("Loan", back_populates="user", cascade="all, delete-orphan")

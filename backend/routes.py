@@ -25,7 +25,8 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(database.get_d
     new_user = models.User(
         email=user_in.email,
         hashed_password=hashed_pwd,
-        monthly_income=user_in.monthly_income
+        monthly_income=user_in.monthly_income,
+        currency=user_in.currency
     )
     db.add(new_user)
     db.commit()
@@ -52,6 +53,8 @@ def get_me(current_user: models.User = Depends(auth.get_current_user)):
 @router.put("/auth/me", response_model=schemas.UserResponse)
 def update_profile(profile_in: schemas.UserProfileUpdate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
     current_user.monthly_income = profile_in.monthly_income
+    if profile_in.currency is not None:
+        current_user.currency = profile_in.currency
     db.commit()
     db.refresh(current_user)
     return current_user

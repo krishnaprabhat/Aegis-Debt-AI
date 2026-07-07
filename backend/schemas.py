@@ -6,7 +6,8 @@ from typing import List, Optional
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
-    monthly_income: float = Field(default=0.0, ge=0.0, description="Monthly net income in dollars")
+    monthly_income: float = Field(default=0.0, ge=0.0, description="Monthly net income")
+    currency: str = Field(default="USD", description="Preferred currency")
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -14,11 +15,13 @@ class UserLogin(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     monthly_income: float = Field(..., ge=0.0)
+    currency: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
     monthly_income: float
+    currency: str
 
     class Config:
         from_attributes = True

@@ -16,7 +16,21 @@ const CurrencyContext = createContext(null);
 export const useCurrency = () => useContext(CurrencyContext);
 
 const CurrencyProvider = ({ children }) => {
-  const [currency, setCurrency] = useState('USD');
+  const auth = useAuth();
+  const [currency, setCurrencyState] = useState('USD');
+
+  useEffect(() => {
+    if (auth?.user?.currency) {
+      setCurrencyState(auth.user.currency);
+    }
+  }, [auth?.user]);
+
+  const setCurrency = async (newCurrency) => {
+    setCurrencyState(newCurrency);
+    if (auth?.user && auth?.updateProfile) {
+      await auth.updateProfile({ currency: newCurrency });
+    }
+  };
 
   const getSymbol = () => {
     switch (currency) {
@@ -78,13 +92,14 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (email, password, monthlyIncome) => {
+  const register = async (email, password, monthlyIncome, currency) => {
     setLoading(true);
     try {
       await api.post('/auth/register', {
         email,
         password,
-        monthly_income: parseFloat(monthlyIncome) || 0
+        monthly_income: parseFloat(monthlyIncome) || 0,
+        currency: currency || 'USD'
       });
       setLoading(false);
       return await login(email, password);
@@ -103,21 +118,28 @@ const AuthProvider = ({ children }) => {
     navigate('/login');
   };
 
-  const updateIncome = async (newIncome) => {
+  const updateProfile = async (updates) => {
     try {
-      const response = await api.put('/auth/me', { monthly_income: parseFloat(newIncome) || 0 });
+      const response = await api.put('/auth/me', {
+        monthly_income: updates.monthly_income !== undefined ? parseFloat(updates.monthly_income) : user.monthly_income,
+        currency: updates.currency !== undefined ? updates.currency : user.currency
+      });
       setUser(response.data);
       return { success: true };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.detail || 'Failed to update income.'
+        message: error.response?.data?.detail || 'Failed to update profile.'
       };
     }
   };
 
+  const updateIncome = async (newIncome) => {
+    return await updateProfile({ monthly_income: newIncome });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateIncome }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateIncome, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
@@ -245,6 +267,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [income, setIncome] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register } = useAuth();
@@ -254,7 +277,7 @@ const Register = () => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
-    const result = await register(email, password, income);
+    const result = await register(email, password, income, currency);
     setIsSubmitting(false);
     if (!result.success) {
       setError(result.message);
@@ -310,18 +333,42 @@ const Register = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Monthly Net Income</label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input
-                type="number"
-                required
-                value={income}
-                onChange={(e) => setIncome(e.target.value)}
-                className="w-full bg-slate-900/50 border border-slate-800 focus:border-emerald-500/50 focus:scale-[1.01] rounded-xl py-3 pl-10 pr-4 text-slate-100 text-sm placeholder-slate-700 outline-none transition-all duration-150"
-                placeholder="e.g. 5000"
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Monthly Net Income</label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="number"
+                  required
+                  value={income}
+                  onChange={(e) => setIncome(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-slate-800 focus:border-emerald-500/50 focus:scale-[1.01] rounded-xl py-3 pl-10 pr-4 text-slate-100 text-sm placeholder-slate-700 outline-none transition-all duration-150"
+                  placeholder="e.g. 5000"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Currency</label>
+              <div className="relative">
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-slate-800 focus:border-emerald-500/50 focus:scale-[1.01] rounded-xl py-3 px-3 text-slate-100 text-sm outline-none transition-all duration-150 appearance-none cursor-pointer"
+                >
+                  <option value="USD" className="bg-slate-950 text-slate-100">USD ($)</option>
+                  <option value="INR" className="bg-slate-950 text-slate-100">INR (₹)</option>
+                  <option value="EUR" className="bg-slate-950 text-slate-100">EUR (€)</option>
+                  <option value="GBP" className="bg-slate-950 text-slate-100">GBP (£)</option>
+                  <option value="CAD" className="bg-slate-950 text-slate-100">CAD (C$)</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-550">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -370,8 +417,8 @@ const AppLayout = () => {
 const App = () => {
   return (
     <Router>
-      <CurrencyProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <CurrencyProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -384,8 +431,8 @@ const App = () => {
               }
             />
           </Routes>
-        </AuthProvider>
-      </CurrencyProvider>
+        </CurrencyProvider>
+      </AuthProvider>
     </Router>
   );
 };
