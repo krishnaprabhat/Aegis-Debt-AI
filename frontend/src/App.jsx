@@ -337,7 +337,9 @@ const Register = () => {
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Monthly Net Income</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 select-none">
+                  {currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'CAD' ? 'C$' : currency === 'INR' ? '₹' : '$'}
+                </span>
                 <input
                   type="number"
                   required
